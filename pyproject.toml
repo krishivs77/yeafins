@@ -22,6 +22,7 @@ dependencies = [
 
 [project.scripts]
 yeafins-download = "yeafins.data.download:main"
+yeafins-parse = "yeafins.data.parse:main"
 
 [project.optional-dependencies]
 dev = [
