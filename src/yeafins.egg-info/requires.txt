@@ -1,0 +1,16 @@
+chess>=1.11
+httpx>=0.28
+numpy>=2.0
+pandas>=2.2
+pyarrow>=18.0
+pydantic>=2.10
+pyyaml>=6.0
+scikit-learn>=1.6
+torch>=2.6
+tqdm>=4.67
+
+[dev]
+mypy>=1.14
+pytest>=8.3
+pytest-cov>=6.0
+ruff>=0.9
