@@ -26,6 +26,7 @@ yeafins-parse = "yeafins.data.parse:main"
 yeafins-split = "yeafins.data.split:main"
 yeafins-positions = "yeafins.data.positions:main"
 yeafins-train = "yeafins.training.train:main"
+yeafins-evaluate = "yeafins.training.evaluate:main"
 
 [project.optional-dependencies]
 dev = [

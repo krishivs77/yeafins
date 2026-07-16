@@ -39,6 +39,7 @@ def write_positions(path: Path) -> None:
                 "fen": starting_fen,
                 "move_label": 877,
                 "move_uci": "e2e4",
+                "player_color": "white",
                 "player_rating": 1000,
                 "opponent_rating": 1000,
                 "time_class": "rapid",

@@ -26,6 +26,7 @@ def write_test_positions(path: Path) -> None:
                 "fen": ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
                 "move_label": 877,
                 "move_uci": "e2e4",
+                "player_color": "white",
                 "player_rating": 1000,
                 "opponent_rating": 1050,
                 "time_class": "rapid",
@@ -37,6 +38,7 @@ def write_test_positions(path: Path) -> None:
                 "fen": ("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"),
                 "move_label": 4584,
                 "move_uci": "g1f3",
+                "player_color": "white",
                 "player_rating": 1000,
                 "opponent_rating": 1050,
                 "time_class": "rapid",
@@ -48,6 +50,7 @@ def write_test_positions(path: Path) -> None:
                 "fen": ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
                 "move_label": 877,
                 "move_uci": "e2e4",
+                "player_color": "white",
                 "player_rating": None,
                 "opponent_rating": None,
                 "time_class": "blitz",
@@ -93,6 +96,7 @@ def test_dataset_sample_shapes_and_types(tmp_path: Path) -> None:
     assert sample["sample_id"] == "train-1"
     assert sample["game_id"] == "game-1"
     assert sample["fen"].startswith("rnbqkbnr")
+    assert sample["player_color"] == "white"
 
 
 def test_dataset_preserves_optional_metadata(tmp_path: Path) -> None:
@@ -130,6 +134,7 @@ def test_dataloader_batches_samples(tmp_path: Path) -> None:
     assert batch["target"].dtype == torch.long
     assert batch["sample_id"] == ["train-1", "train-2"]
     assert len(batch["fen"]) == 2
+    assert batch["player_color"] == ["white", "white"]
 
 
 def test_dataset_rejects_invalid_split(tmp_path: Path) -> None:
