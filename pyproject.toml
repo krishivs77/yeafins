@@ -20,6 +20,9 @@ dependencies = [
     "tqdm>=4.67",
 ]
 
+[project.scripts]
+yeafins-download = "yeafins.data.download:main"
+
 [project.optional-dependencies]
 dev = [
     "mypy>=1.14",
