@@ -5,13 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import chess
+import numpy as np
 import pandas as pd
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
 from yeafins.data.board import encode_fen
-from yeafins.data.encode import POLICY_SIZE
+from yeafins.data.encode import POLICY_SIZE, legal_move_mask
 
 DEFAULT_POSITIONS_PATH = Path("data/processed/positions.parquet")
 
@@ -76,6 +78,7 @@ class ChessPolicyDataset(Dataset[dict[str, Any]]):
             "target": torch.tensor(move_label, dtype=torch.long),
             "sample_id": str(row["sample_id"]),
             "game_id": str(row["game_id"]),
+            "fen": str(row["fen"]),
             "move_uci": str(row["move_uci"]),
             "player_rating": self._optional_float(row["player_rating"]),
             "opponent_rating": self._optional_float(row["opponent_rating"]),
@@ -124,3 +127,24 @@ def create_dataloader(
         pin_memory=pin_memory,
         drop_last=drop_last,
     )
+
+
+def create_legal_mask_tensor(
+    fens: list[str] | tuple[str, ...],
+) -> Tensor:
+    """Create a batched Boolean legal-move mask from FEN strings."""
+    if not fens:
+        raise ValueError("At least one FEN is required")
+
+    masks: list[np.ndarray] = []
+
+    for fen in fens:
+        try:
+            board = chess.Board(str(fen))
+        except ValueError as exc:
+            raise ValueError(f"Invalid FEN: {fen!r}") from exc
+
+        masks.append(legal_move_mask(board))
+
+    stacked = np.stack(masks, axis=0)
+    return torch.from_numpy(stacked)

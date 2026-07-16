@@ -7,9 +7,11 @@ import pytest
 import torch
 
 from yeafins.data.board import BOARD_SHAPE
+from yeafins.data.encode import POLICY_SIZE
 from yeafins.training.dataset import (
     ChessPolicyDataset,
     create_dataloader,
+    create_legal_mask_tensor,
 )
 
 
@@ -90,6 +92,7 @@ def test_dataset_sample_shapes_and_types(tmp_path: Path) -> None:
     assert sample["target"].dtype == torch.long
     assert sample["sample_id"] == "train-1"
     assert sample["game_id"] == "game-1"
+    assert sample["fen"].startswith("rnbqkbnr")
 
 
 def test_dataset_preserves_optional_metadata(tmp_path: Path) -> None:
@@ -126,6 +129,7 @@ def test_dataloader_batches_samples(tmp_path: Path) -> None:
     assert batch["target"].shape == (2,)
     assert batch["target"].dtype == torch.long
     assert batch["sample_id"] == ["train-1", "train-2"]
+    assert len(batch["fen"]) == 2
 
 
 def test_dataset_rejects_invalid_split(tmp_path: Path) -> None:
@@ -157,3 +161,14 @@ def test_dataloader_rejects_invalid_batch_size(tmp_path: Path) -> None:
             split="train",
             batch_size=0,
         )
+
+
+def test_create_legal_mask_tensor() -> None:
+    starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+    masks = create_legal_mask_tensor([starting_fen, starting_fen])
+
+    assert masks.shape == (2, POLICY_SIZE)
+    assert masks.dtype == torch.bool
+    assert masks[0].sum().item() == 20
+    assert masks[1].sum().item() == 20
