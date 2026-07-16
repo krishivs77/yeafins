@@ -222,3 +222,30 @@ def test_rejects_game_without_moves() -> None:
 
     assert isinstance(result, RejectedGame)
     assert result.reason == "no_moves"
+
+
+def test_rejects_nonstandard_starting_position() -> None:
+    game = read_single_game(
+        """
+[Event "Live Chess - Odds Chess"]
+[Site "https://www.chess.com/game/live/123"]
+[Date "2026.07.16"]
+[White "Yeafins"]
+[Black "Opponent"]
+[Result "1-0"]
+[SetUp "1"]
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN1 w Qkq - 0 1"]
+
+1. e4 e5 2. Nf3 Nc6 1-0
+"""
+    )
+
+    result = parse_game(
+        game,
+        username="yeafins",
+        source_file=Path("odds.pgn"),
+        source_game_index=1,
+    )
+
+    assert isinstance(result, RejectedGame)
+    assert result.reason == "nonstandard_starting_position"

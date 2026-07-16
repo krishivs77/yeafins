@@ -235,10 +235,27 @@ def parse_game(
     try:
         board = game.board()
     except (ValueError, TypeError):
-        return RejectedGame(source_name, source_game_index, "invalid_starting_position")
+        return RejectedGame(
+            source_name,
+            source_game_index,
+            "invalid_starting_position",
+        )
 
     if type(board) is not chess.Board or board.chess960:
-        return RejectedGame(source_name, source_game_index, "nonstandard_board")
+        return RejectedGame(
+            source_name,
+            source_game_index,
+            "nonstandard_board",
+        )
+
+    standard_start = chess.Board()
+
+    if board.fen() != standard_start.fen():
+        return RejectedGame(
+            source_name,
+            source_game_index,
+            "nonstandard_starting_position",
+        )
 
     moves_uci: list[str] = []
     moves_san: list[str] = []
