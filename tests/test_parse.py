@@ -9,6 +9,7 @@ from yeafins.data.parse import (
     ParsedGame,
     RejectedGame,
     infer_player_result,
+    infer_time_class,
     parse_game,
     parse_optional_bool,
     parse_optional_int,
@@ -42,6 +43,45 @@ def test_infer_player_result() -> None:
     assert infer_player_result("0-1", "black") == "win"
     assert infer_player_result("1/2-1/2", "white") == "draw"
     assert infer_player_result("*", "white") == "unknown"
+
+
+def test_infer_time_class_from_explicit_header() -> None:
+    headers = chess.pgn.Headers()
+    headers["TimeClass"] = "Rapid"
+    headers["TimeControl"] = "180"
+
+    assert infer_time_class(headers) == "rapid"
+
+
+def test_infer_time_class_from_time_control() -> None:
+    expected = {
+        "30": "bullet",
+        "60": "bullet",
+        "60+1": "bullet",
+        "120+1": "blitz",
+        "180": "blitz",
+        "180+2": "blitz",
+        "300": "blitz",
+        "300+5": "blitz",
+        "600": "rapid",
+        "900+10": "rapid",
+        "1800": "rapid",
+        "3600": "rapid",
+        "1/259200": "daily",
+    }
+
+    for time_control, time_class in expected.items():
+        headers = chess.pgn.Headers()
+        headers["TimeControl"] = time_control
+
+        assert infer_time_class(headers) == time_class
+
+
+def test_infer_time_class_returns_unknown_for_unrecognized_control() -> None:
+    headers = chess.pgn.Headers()
+    headers["TimeControl"] = "45+5"
+
+    assert infer_time_class(headers) == "unknown"
 
 
 def test_parse_standard_game_as_white() -> None:

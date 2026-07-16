@@ -121,14 +121,36 @@ def infer_player_result(result: str, player_color: str) -> str:
 
 
 def infer_time_class(headers: chess.pgn.Headers) -> str:
-    """Read Chess.com's time-class metadata when available."""
+    """Infer the Chess.com time class from PGN metadata."""
+
     for key in ("TimeClass", "TimeCategory"):
         value = headers.get(key)
 
         if value:
             return value.strip().lower()
 
-    return "unknown"
+    time_control = headers.get("TimeControl", "").strip()
+
+    if not time_control:
+        return "unknown"
+
+    known_classes = {
+        "30": "bullet",
+        "60": "bullet",
+        "60+1": "bullet",
+        "120+1": "blitz",
+        "180": "blitz",
+        "180+2": "blitz",
+        "300": "blitz",
+        "300+5": "blitz",
+        "600": "rapid",
+        "900+10": "rapid",
+        "1800": "rapid",
+        "3600": "rapid",
+        "1/259200": "daily",
+    }
+
+    return known_classes.get(time_control, "unknown")
 
 
 def make_game_id(
