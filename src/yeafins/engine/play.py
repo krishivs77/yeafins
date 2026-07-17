@@ -39,7 +39,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--style-weight",
         type=float,
-        default=0.20,
+        default=None,
+        help=(
+            "Override the phase-aware style weight. "
+            "Defaults to opening=0.30, "
+            "middlegame=0.10, and endgame=0.20."
+        ),
     )
     return parser.parse_args()
 

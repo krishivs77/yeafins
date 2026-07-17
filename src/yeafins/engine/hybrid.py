@@ -234,6 +234,43 @@ def evaluate_candidates(
     return evaluated
 
 
+def infer_game_phase(board: chess.Board) -> str:
+    """Classify a position as opening, middlegame, or endgame."""
+    if board.fullmove_number <= 10:
+        return "opening"
+
+    values = {
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9,
+    }
+
+    non_pawn_material = sum(
+        len(board.pieces(piece_type, color)) * value
+        for piece_type, value in values.items()
+        for color in (chess.WHITE, chess.BLACK)
+    )
+
+    if non_pawn_material <= 14:
+        return "endgame"
+
+    return "middlegame"
+
+
+def phase_style_weight(board: chess.Board) -> float:
+    """Return the validated default style weight for the position phase."""
+    phase = infer_game_phase(board)
+
+    weights = {
+        "opening": 0.30,
+        "middlegame": 0.10,
+        "endgame": 0.20,
+    }
+
+    return weights[phase]
+
+
 def normalize_stockfish_scores(
     candidates: list[CandidateMove],
 ) -> dict[chess.Move, float]:
@@ -362,7 +399,7 @@ class YeafinsHybridEngine:
         temperature: float = 1.0,
         depth: int | None = 12,
         time_limit_seconds: float | None = None,
-        style_weight: float = 0.20,
+        style_weight: float | None = None,
     ) -> HybridDecision:
         """Select a move for the current board."""
         proposed = model_candidates(
@@ -381,6 +418,8 @@ class YeafinsHybridEngine:
             time_limit_seconds=time_limit_seconds,
         )
 
+        resolved_style_weight = phase_style_weight(board) if style_weight is None else style_weight
+
         if mode == "best_of_top_k":
             selected = choose_best_of_top_k(evaluated)
             final_candidates = evaluated
@@ -388,7 +427,7 @@ class YeafinsHybridEngine:
         elif mode == "blended":
             selected = choose_blended(
                 evaluated,
-                style_weight=style_weight,
+                style_weight=resolved_style_weight,
             )
 
             final_candidates = evaluated

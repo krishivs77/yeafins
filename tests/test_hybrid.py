@@ -8,7 +8,9 @@ from yeafins.engine.hybrid import (
     HybridEngineError,
     choose_best_of_top_k,
     choose_blended,
+    infer_game_phase,
     normalize_stockfish_scores,
+    phase_style_weight,
 )
 
 
@@ -73,3 +75,24 @@ def test_choose_functions_reject_empty_candidates() -> None:
 
     with pytest.raises(HybridEngineError):
         choose_blended([])
+
+
+def test_infer_game_phase_opening() -> None:
+    board = chess.Board()
+
+    assert infer_game_phase(board) == "opening"
+    assert phase_style_weight(board) == 0.30
+
+
+def test_infer_game_phase_middlegame() -> None:
+    board = chess.Board("r1bq1rk1/pp2bppp/2n1pn2/2pp4/3P4/2PBPN2/PP1N1PPP/R1BQ1RK1 w - - 0 15")
+
+    assert infer_game_phase(board) == "middlegame"
+    assert phase_style_weight(board) == 0.10
+
+
+def test_infer_game_phase_endgame() -> None:
+    board = chess.Board("8/8/4k3/8/8/4K3/4P3/8 w - - 0 30")
+
+    assert infer_game_phase(board) == "endgame"
+    assert phase_style_weight(board) == 0.20
