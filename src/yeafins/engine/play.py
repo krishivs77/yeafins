@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Override the phase-aware style weight. "
-            "Defaults to opening=0.30, "
+            "Defaults to opening=0.20, "
             "middlegame=0.10, and endgame=0.20."
         ),
     )

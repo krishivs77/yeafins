@@ -81,7 +81,7 @@ def test_infer_game_phase_opening() -> None:
     board = chess.Board()
 
     assert infer_game_phase(board) == "opening"
-    assert phase_style_weight(board) == 0.30
+    assert phase_style_weight(board) == 0.20
 
 
 def test_infer_game_phase_middlegame() -> None:

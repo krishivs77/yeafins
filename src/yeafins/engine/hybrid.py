@@ -263,7 +263,7 @@ def phase_style_weight(board: chess.Board) -> float:
     phase = infer_game_phase(board)
 
     weights = {
-        "opening": 0.30,
+        "opening": 0.20,
         "middlegame": 0.10,
         "endgame": 0.20,
     }
