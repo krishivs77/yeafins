@@ -362,7 +362,7 @@ class YeafinsHybridEngine:
         temperature: float = 1.0,
         depth: int | None = 12,
         time_limit_seconds: float | None = None,
-        style_weight: float = 0.65,
+        style_weight: float = 0.20,
     ) -> HybridDecision:
         """Select a move for the current board."""
         proposed = model_candidates(

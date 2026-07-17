@@ -39,7 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--style-weight",
         type=float,
-        default=0.65,
+        default=0.20,
     )
     return parser.parse_args()
 
