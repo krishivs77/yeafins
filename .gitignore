@@ -16,4 +16,4 @@ data/processed/*
 
 checkpoints/
 runs/
-wandb/
+games/
