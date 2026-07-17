@@ -13,7 +13,6 @@ from yeafins.engine.hybrid import (
 
 
 def make_candidates() -> list[CandidateMove]:
-    board = chess.Board()
 
     return [
         CandidateMove(
