@@ -34,6 +34,9 @@ DEFAULT_MAX_K = 8
 DEFAULT_DEPTH = 10
 DEFAULT_STYLE_WEIGHTS = (0.25, 0.50, 0.75)
 
+CP_CLIP = 1_000
+BLUNDER_THRESHOLDS = (100, 200, 500)
+
 MATE_SCORE = 100_000
 
 
@@ -271,6 +274,8 @@ def evaluate_position(
 
     candidates = candidate_records(proposed, scores)
 
+    best_candidate_cp = max(candidate.stockfish_cp for candidate in candidates)
+
     selections = select_methods(
         candidates,
         top_k_values=top_k_values,
@@ -288,6 +293,7 @@ def evaluate_position(
         "fen": fen,
         "actual_move": actual_move.uci(),
         "actual_cp": scores[actual_move],
+        "best_candidate_cp": best_candidate_cp,
         "actual_model_rank": actual_rank,
         "actual_in_top_3": (actual_rank is not None and actual_rank <= 3),
         "actual_in_top_5": (actual_rank is not None and actual_rank <= 5),
@@ -309,37 +315,70 @@ def evaluate_position(
     return record
 
 
+def clip_centipawns(series: pd.Series, limit: int = CP_CLIP) -> pd.Series:
+    """Clip extreme mate-equivalent scores for robust aggregation."""
+    return series.clip(lower=-limit, upper=limit)
+
+
+def candidate_best_cp(results: pd.DataFrame) -> pd.Series:
+    """Return the strongest model-proposed candidate score per position."""
+    return results["best_candidate_cp"].astype(float)
+
+
 def summarize_method(
     results: pd.DataFrame,
     method_name: str,
 ) -> dict[str, float | int]:
-    """Summarize one move-selection method."""
+    """Summarize style fidelity and robust engine-strength metrics."""
     cp_column = f"{method_name}_cp"
     rank_column = f"{method_name}_model_rank"
     probability_column = f"{method_name}_model_probability"
     match_column = f"{method_name}_matches_actual"
 
-    raw_cp = results["raw_policy_cp"]
-    method_cp = results[cp_column]
-    actual_cp = results["actual_cp"]
+    raw_cp = results["raw_policy_cp"].astype(float)
+    method_cp = results[cp_column].astype(float)
+    actual_cp = results["actual_cp"].astype(float)
+    best_cp = candidate_best_cp(results).astype(float)
 
     improvement_over_raw = method_cp - raw_cp
     improvement_over_actual = method_cp - actual_cp
+    loss_to_best = best_cp - method_cp
 
-    return {
+    clipped_method = clip_centipawns(method_cp)
+    clipped_raw = clip_centipawns(raw_cp)
+    clipped_actual = clip_centipawns(actual_cp)
+    clipped_best = clip_centipawns(best_cp)
+
+    clipped_improvement_over_raw = clipped_method - clipped_raw
+    clipped_improvement_over_actual = clipped_method - clipped_actual
+    clipped_loss_to_best = clipped_best - clipped_method
+
+    summary: dict[str, float | int] = {
         "samples": int(len(results)),
         "actual_move_match_rate": float(results[match_column].mean()),
-        "mean_stockfish_cp": float(method_cp.mean()),
-        "median_stockfish_cp": float(method_cp.median()),
         "mean_model_rank": float(results[rank_column].mean()),
         "mean_model_probability": float(results[probability_column].mean()),
-        "mean_cp_improvement_over_raw": float(improvement_over_raw.mean()),
+        # Robust strength summaries.
         "median_cp_improvement_over_raw": float(improvement_over_raw.median()),
-        "mean_cp_improvement_over_actual": float(improvement_over_actual.mean()),
+        "mean_clipped_cp_improvement_over_raw": float(clipped_improvement_over_raw.mean()),
+        "median_cp_improvement_over_actual": float(improvement_over_actual.median()),
+        "mean_clipped_cp_improvement_over_actual": float(clipped_improvement_over_actual.mean()),
+        "mean_clipped_cp_loss_to_best_candidate": float(clipped_loss_to_best.mean()),
+        "median_cp_loss_to_best_candidate": float(loss_to_best.median()),
         "improved_over_raw_rate": float((improvement_over_raw > 0).mean()),
-        "improved_by_50cp_over_raw_rate": float((improvement_over_raw >= 50).mean()),
+        "equal_to_raw_rate": float((improvement_over_raw == 0).mean()),
         "worsened_vs_raw_rate": float((improvement_over_raw < 0).mean()),
+        # Retain uncapped values for debugging only.
+        "diagnostic_mean_uncapped_cp": float(method_cp.mean()),
+        "diagnostic_mean_uncapped_improvement_over_raw": float(improvement_over_raw.mean()),
     }
+
+    for threshold in BLUNDER_THRESHOLDS:
+        summary[f"loss_to_best_at_least_{threshold}cp_rate"] = float(
+            (loss_to_best >= threshold).mean()
+        )
+
+    return summary
 
 
 def build_summary(
@@ -644,7 +683,10 @@ def main() -> None:
             f"  {method_name:16s} "
             f"match={metrics['actual_move_match_rate']:.3f} "
             f"mean_rank={metrics['mean_model_rank']:.2f} "
-            f"gain_vs_raw={metrics['mean_cp_improvement_over_raw']:+.1f}cp"
+            f"clipped_gain="
+            f"{metrics['mean_clipped_cp_improvement_over_raw']:+.1f}cp "
+            f"loss_to_best="
+            f"{metrics['mean_clipped_cp_loss_to_best_candidate']:.1f}cp"
         )
 
 

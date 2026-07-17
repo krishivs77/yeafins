@@ -100,6 +100,7 @@ def test_build_summary() -> None:
                 "actual_in_top_8": True,
                 "evaluation_seconds": 0.1,
                 "raw_policy_cp": 10,
+                "best_candidate_cp": 40,
                 "raw_policy_model_rank": 1,
                 "raw_policy_model_probability": 0.6,
                 "raw_policy_matches_actual": True,
@@ -116,6 +117,7 @@ def test_build_summary() -> None:
                 "actual_in_top_8": True,
                 "evaluation_seconds": 0.2,
                 "raw_policy_cp": -20,
+                "best_candidate_cp": 10,
                 "raw_policy_model_rank": 1,
                 "raw_policy_model_probability": 0.5,
                 "raw_policy_matches_actual": False,
@@ -138,4 +140,4 @@ def test_build_summary() -> None:
 
     assert summary["positions_evaluated"] == 2
     assert summary["candidate_coverage"]["top3"] == 0.5
-    assert summary["methods"]["best_of_top_3"]["mean_cp_improvement_over_raw"] == 30.0
+    assert summary["methods"]["best_of_top_3"]["mean_clipped_cp_improvement_over_raw"] == 30.0

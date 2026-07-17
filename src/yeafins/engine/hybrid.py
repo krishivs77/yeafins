@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -275,24 +274,35 @@ def choose_blended(
     *,
     style_weight: float = 0.65,
 ) -> CandidateMove:
-    """Choose using both model preference and Stockfish quality."""
+    """Choose using normalized model preference and engine quality."""
     if not candidates:
         raise HybridEngineError("No candidates were provided")
 
     if not 0.0 <= style_weight <= 1.0:
         raise ValueError("style_weight must be between 0 and 1")
 
-    engine_weight = 1.0 - style_weight
     engine_scores = normalize_stockfish_scores(candidates)
+
+    probabilities = [candidate.model_probability for candidate in candidates]
+    minimum_probability = min(probabilities)
+    maximum_probability = max(probabilities)
+
+    if minimum_probability == maximum_probability:
+        model_scores = {candidate.move: 1.0 for candidate in candidates}
+    else:
+        model_scores = {
+            candidate.move: (candidate.model_probability - minimum_probability)
+            / (maximum_probability - minimum_probability)
+            for candidate in candidates
+        }
 
     rescored: list[CandidateMove] = []
 
     for candidate in candidates:
-        model_score = math.log(max(candidate.model_probability, 1e-12))
-
-        # Convert negative log probabilities to a bounded relative score
-        # across this candidate set.
-        blended_score = style_weight * model_score + engine_weight * engine_scores[candidate.move]
+        blended_score = (
+            style_weight * model_scores[candidate.move]
+            + (1.0 - style_weight) * engine_scores[candidate.move]
+        )
 
         rescored.append(
             CandidateMove(
@@ -309,6 +319,7 @@ def choose_blended(
         key=lambda candidate: (
             float(candidate.blended_score),
             candidate.stockfish_cp,
+            candidate.model_probability,
         ),
     )
 
@@ -380,26 +391,7 @@ class YeafinsHybridEngine:
                 style_weight=style_weight,
             )
 
-            final_candidates = [
-                CandidateMove(
-                    move=candidate.move,
-                    model_probability=candidate.model_probability,
-                    model_rank=candidate.model_rank,
-                    stockfish_cp=candidate.stockfish_cp,
-                    blended_score=(
-                        style_weight
-                        * math.log(
-                            max(
-                                candidate.model_probability,
-                                1e-12,
-                            )
-                        )
-                        + (1.0 - style_weight)
-                        * normalize_stockfish_scores(evaluated)[candidate.move]
-                    ),
-                )
-                for candidate in evaluated
-            ]
+            final_candidates = evaluated
 
         else:
             raise ValueError(f"Unsupported selection mode: {mode}")
