@@ -67,8 +67,8 @@ describe("engine API", () => {
       top_k: 16,
       mode: "blended",
       stockfish_elo: 2000,
-      depth: 10,
-      time_limit_seconds: null,
+      depth: null,
+      time_limit_seconds: 1.5,
       style_weight: null,
     });
   });
