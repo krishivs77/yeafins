@@ -11,8 +11,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
 COPY pyproject.toml README.md ./
 COPY src ./src
+
+RUN mkdir -p /app/models
+COPY models/best.pt /app/models/best.pt
+
 RUN pip install --no-cache-dir .
 
 RUN addgroup --system yeafins \
@@ -23,6 +28,6 @@ RUN addgroup --system yeafins \
 USER yeafins
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-    CMD curl --fail --silent http://127.0.0.1:8000/health > /dev/null || exit 1
+    CMD curl --fail --silent "http://127.0.0.1:${PORT:-8000}/health" > /dev/null || exit 1
 
-CMD ["uvicorn", "yeafins.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn yeafins.api.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
