@@ -55,7 +55,7 @@ def parse_move(
             raise ValueError(f"Could not understand move: {cleaned}") from error
 
         if move not in board.legal_moves:
-            raise ValueError(f"Move is illegal in this position: {cleaned}")
+            raise ValueError(f"Move is illegal in this position: {cleaned}") from None
 
     return move
 
