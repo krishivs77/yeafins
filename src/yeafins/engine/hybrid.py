@@ -361,6 +361,12 @@ def choose_blended(
     )
 
 
+def validate_stockfish_elo(stockfish_elo: int) -> None:
+    """Validate a Stockfish limited-strength Elo setting."""
+    if not 1320 <= stockfish_elo <= 3190:
+        raise ValueError("stockfish_elo must be between 1320 and 3190")
+
+
 class YeafinsHybridEngine:
     """Personalized move proposer with Stockfish verification."""
 
@@ -371,12 +377,15 @@ class YeafinsHybridEngine:
         stockfish_path: str | None = None,
         threads: int = 1,
         hash_mb: int = 128,
+        stockfish_elo: int = 2000,
     ) -> None:
         if threads <= 0:
             raise ValueError("threads must be positive")
 
         if hash_mb <= 0:
             raise ValueError("hash_mb must be positive")
+
+        validate_stockfish_elo(stockfish_elo)
 
         self.model, self.device = load_policy_model(checkpoint_path)
 
@@ -387,6 +396,8 @@ class YeafinsHybridEngine:
             {
                 "Threads": threads,
                 "Hash": hash_mb,
+                "UCI_LimitStrength": True,
+                "UCI_Elo": stockfish_elo,
             }
         )
 

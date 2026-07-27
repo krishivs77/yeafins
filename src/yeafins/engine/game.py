@@ -31,6 +31,7 @@ class GameConfig:
     depth: int | None = 10
     time_limit_seconds: float | None = None
     style_weight: float | None = None
+    stockfish_elo: int = 2000
     show_candidates: bool = True
     output_directory: Path = Path("games")
 
@@ -265,6 +266,7 @@ def play_game(config: GameConfig) -> Path:
 
     with YeafinsHybridEngine(
         checkpoint_path=config.checkpoint_path,
+        stockfish_elo=config.stockfish_elo,
     ) as engine:
         while not board.is_game_over(claim_draw=True):
             print()
@@ -349,6 +351,12 @@ def parse_args() -> argparse.Namespace:
         help=("Override phase-aware style weighting."),
     )
     parser.add_argument(
+        "--stockfish-elo",
+        type=int,
+        default=2000,
+        help=("Target limited Stockfish strength from 1320 to 3190."),
+    )
+    parser.add_argument(
         "--hide-candidates",
         action="store_true",
     )
@@ -375,6 +383,7 @@ def main() -> None:
         depth=depth,
         time_limit_seconds=args.time_limit_seconds,
         style_weight=args.style_weight,
+        stockfish_elo=args.stockfish_elo,
         show_candidates=not args.hide_candidates,
         output_directory=args.output_directory,
     )

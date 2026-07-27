@@ -11,6 +11,7 @@ from yeafins.engine.hybrid import (
     infer_game_phase,
     normalize_stockfish_scores,
     phase_style_weight,
+    validate_stockfish_elo,
 )
 
 
@@ -96,3 +97,15 @@ def test_infer_game_phase_endgame() -> None:
 
     assert infer_game_phase(board) == "endgame"
     assert phase_style_weight(board) == 0.20
+
+
+def test_validate_stockfish_elo() -> None:
+    validate_stockfish_elo(1320)
+    validate_stockfish_elo(2000)
+    validate_stockfish_elo(3190)
+
+    with pytest.raises(ValueError):
+        validate_stockfish_elo(1319)
+
+    with pytest.raises(ValueError):
+        validate_stockfish_elo(3191)

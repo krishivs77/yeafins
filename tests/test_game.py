@@ -98,3 +98,4 @@ def test_game_config_defaults() -> None:
     assert config.mode == "blended"
     assert config.depth == 10
     assert config.style_weight is None
+    assert config.stockfish_elo == 2000

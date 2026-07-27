@@ -37,6 +37,12 @@ def parse_args() -> argparse.Namespace:
         default=12,
     )
     parser.add_argument(
+        "--stockfish-elo",
+        type=int,
+        default=2000,
+        help=("Target limited Stockfish strength from 1320 to 3190."),
+    )
+    parser.add_argument(
         "--style-weight",
         type=float,
         default=None,
@@ -55,6 +61,7 @@ def main() -> None:
 
     with YeafinsHybridEngine(
         checkpoint_path=args.checkpoint,
+        stockfish_elo=args.stockfish_elo,
     ) as engine:
         decision = engine.choose_move(
             board,
