@@ -1,6 +1,9 @@
 """Tests for hybrid model and Stockfish move selection."""
 
+from unittest.mock import MagicMock
+
 import chess
+import chess.engine
 import pytest
 
 from yeafins.engine.hybrid import (
@@ -8,6 +11,8 @@ from yeafins.engine.hybrid import (
     HybridEngineError,
     choose_best_of_top_k,
     choose_blended,
+    evaluate_candidates,
+    evaluate_root_moves,
     infer_game_phase,
     normalize_stockfish_scores,
     phase_style_weight,
@@ -37,6 +42,128 @@ def make_candidates() -> list[CandidateMove]:
             stockfish_cp=20,
         ),
     ]
+
+
+def proposed_candidates(count: int) -> list[tuple[chess.Move, float, int]]:
+    moves = list(chess.Board().legal_moves)[:count]
+    return [(move, 1.0 / (index + 2), index + 1) for index, move in enumerate(moves)]
+
+
+def multipv_results(
+    candidates: list[tuple[chess.Move, float, int]],
+) -> list[dict[str, object]]:
+    return [
+        {
+            "pv": [move],
+            "score": chess.engine.PovScore(
+                chess.engine.Cp(index * 10),
+                chess.WHITE,
+            ),
+        }
+        for index, (move, _, _) in reversed(list(enumerate(candidates, start=1)))
+    ]
+
+
+def test_time_limited_candidates_use_one_restricted_multipv_call() -> None:
+    board = chess.Board()
+    candidates = proposed_candidates(16)
+    engine = MagicMock()
+    engine.analyse.return_value = multipv_results(candidates)
+
+    evaluated = evaluate_candidates(
+        engine,
+        board,
+        candidates,
+        depth=None,
+        time_limit_seconds=1.5,
+    )
+
+    engine.analyse.assert_called_once()
+    called_board, limit = engine.analyse.call_args.args
+    assert called_board is board
+    assert limit.time == 1.5
+    assert limit.depth is None
+    assert engine.analyse.call_args.kwargs["root_moves"] == [move for move, _, _ in candidates]
+    assert engine.analyse.call_args.kwargs["multipv"] == 16
+    assert [candidate.move for candidate in evaluated] == [move for move, _, _ in candidates]
+    assert [candidate.stockfish_cp for candidate in evaluated] == [
+        index * 10 for index in range(1, 17)
+    ]
+
+
+def test_depth_limited_candidates_are_batched() -> None:
+    board = chess.Board()
+    candidates = proposed_candidates(4)
+    engine = MagicMock()
+    engine.analyse.return_value = multipv_results(candidates)
+
+    evaluate_candidates(
+        engine,
+        board,
+        candidates,
+        depth=10,
+        time_limit_seconds=None,
+    )
+
+    engine.analyse.assert_called_once()
+    limit = engine.analyse.call_args.args[1]
+    assert limit.depth == 10
+    assert limit.time is None
+    assert engine.analyse.call_args.kwargs["multipv"] == 4
+
+
+@pytest.mark.parametrize("candidate_count", [1, 4, 16])
+def test_analyse_call_count_does_not_scale_with_top_k(candidate_count: int) -> None:
+    board = chess.Board()
+    candidates = proposed_candidates(candidate_count)
+    engine = MagicMock()
+    engine.analyse.return_value = multipv_results(candidates)
+
+    evaluate_candidates(
+        engine,
+        board,
+        candidates,
+        depth=None,
+        time_limit_seconds=1.5,
+    )
+
+    assert engine.analyse.call_count == 1
+
+
+def test_single_root_move_accepts_dict_result_and_preserves_mate_score() -> None:
+    board = chess.Board()
+    move = chess.Move.from_uci("e2e4")
+    engine = MagicMock()
+    engine.analyse.return_value = {
+        "pv": [move],
+        "score": chess.engine.PovScore(chess.engine.Mate(3), chess.WHITE),
+    }
+
+    scores = evaluate_root_moves(
+        engine,
+        board,
+        [move],
+        depth=None,
+        time_limit_seconds=1.5,
+    )
+
+    assert scores == {move: 99_997}
+
+
+def test_missing_multipv_root_move_raises_engine_error() -> None:
+    board = chess.Board()
+    candidates = proposed_candidates(3)
+    engine = MagicMock()
+    engine.analyse.return_value = multipv_results(candidates[:2])
+
+    with pytest.raises(HybridEngineError, match="did not score all root moves"):
+        evaluate_candidates(
+            engine,
+            board,
+            candidates,
+            depth=None,
+            time_limit_seconds=1.5,
+        )
 
 
 def test_normalize_stockfish_scores() -> None:

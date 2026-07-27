@@ -19,6 +19,7 @@ from yeafins.engine.hybrid import (
     CandidateMove,
     choose_best_of_top_k,
     choose_blended,
+    evaluate_root_moves,
     load_policy_model,
     model_candidates,
     resolve_stockfish_path,
@@ -36,8 +37,6 @@ DEFAULT_STYLE_WEIGHTS = (0.25, 0.50, 0.75)
 
 CP_CLIP = 1_000
 BLUNDER_THRESHOLDS = (100, 200, 500)
-
-MATE_SCORE = 100_000
 
 
 class HybridEvaluationError(RuntimeError):
@@ -81,77 +80,6 @@ def unique_moves(moves: Iterable[chess.Move]) -> list[chess.Move]:
             result.append(move)
 
     return result
-
-
-def evaluate_root_moves(
-    engine: chess.engine.SimpleEngine,
-    board: chess.Board,
-    moves: list[chess.Move],
-    *,
-    depth: int | None,
-    time_limit_seconds: float | None,
-) -> dict[chess.Move, int]:
-    """Evaluate a restricted set of root moves in one MultiPV search."""
-    if not moves:
-        raise ValueError("At least one root move is required")
-
-    illegal_moves = [move for move in moves if move not in board.legal_moves]
-
-    if illegal_moves:
-        rendered = ", ".join(move.uci() for move in illegal_moves)
-        raise HybridEvaluationError(f"Illegal root moves supplied: {rendered}")
-
-    if depth is None and time_limit_seconds is None:
-        raise ValueError("Either depth or time_limit_seconds must be provided")
-
-    if time_limit_seconds is not None:
-        if time_limit_seconds <= 0:
-            raise ValueError("time_limit_seconds must be positive")
-
-        limit = chess.engine.Limit(
-            time=time_limit_seconds,
-        )
-    else:
-        if depth is None or depth <= 0:
-            raise ValueError("depth must be positive")
-
-        limit = chess.engine.Limit(depth=depth)
-
-    information = engine.analyse(
-        board,
-        limit,
-        multipv=len(moves),
-        root_moves=moves,
-    )
-
-    if isinstance(information, dict):
-        information = [information]
-
-    scores: dict[chess.Move, int] = {}
-
-    for item in information:
-        principal_variation = item.get("pv")
-
-        if not principal_variation:
-            continue
-
-        root_move = principal_variation[0]
-        score = item["score"].pov(board.turn).score(mate_score=MATE_SCORE)
-
-        if score is None:
-            raise HybridEvaluationError(
-                f"Stockfish returned no numeric score for {root_move.uci()}"
-            )
-
-        scores[root_move] = int(score)
-
-    missing = [move for move in moves if move not in scores]
-
-    if missing:
-        rendered = ", ".join(move.uci() for move in missing)
-        raise HybridEvaluationError(f"Stockfish did not score all root moves: {rendered}")
-
-    return scores
 
 
 def game_phase(fen: str) -> str:

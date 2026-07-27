@@ -6,6 +6,7 @@ import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import chess
 import pytest
 from fastapi.testclient import TestClient
 
@@ -19,6 +20,7 @@ from yeafins.api.schemas import (
     MoveResponse,
 )
 from yeafins.api.service import YeafinsService
+from yeafins.engine.hybrid import CandidateMove, HybridDecision
 
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -250,3 +252,67 @@ def test_service_startup_initializes_engine_only_once(
     assert constructor.call_count == 1
     assert service.health().status == "ok"
     asyncio.run(service.shutdown())
+
+
+def test_service_preserves_model_rank_candidate_order_and_contract() -> None:
+    service = YeafinsService(
+        Path("unused.pt"),
+        stockfish_path=None,
+        threads=1,
+        hash_mb=16,
+    )
+    engine = MagicMock()
+    e4 = chess.Move.from_uci("e2e4")
+    d4 = chess.Move.from_uci("d2d4")
+    nf3 = chess.Move.from_uci("g1f3")
+    engine.choose_move.return_value = HybridDecision(
+        selected_move=d4,
+        candidates=(
+            CandidateMove(nf3, 0.2, 3, 10),
+            CandidateMove(e4, 0.5, 1, 20),
+            CandidateMove(d4, 0.3, 2, 30),
+        ),
+        mode="blended",
+        top_k=16,
+    )
+    service._engine = engine
+    request = MoveRequest(
+        fen=START_FEN,
+        mode="blended",
+        top_k=16,
+        stockfish_elo=2000,
+        depth=None,
+        time_limit_seconds=1.5,
+        style_weight=None,
+    )
+
+    response = service._choose_move_sync(chess.Board(), request)
+
+    assert [candidate.model_rank for candidate in response.candidates] == [1, 2, 3]
+    assert [candidate.move_uci for candidate in response.candidates] == [
+        "e2e4",
+        "d2d4",
+        "g1f3",
+    ]
+    assert response.model_dump().keys() == {
+        "fen",
+        "selected_move_uci",
+        "selected_move_san",
+        "phase",
+        "resolved_style_weight",
+        "mode",
+        "top_k",
+        "stockfish_elo",
+        "candidates",
+        "game_over",
+        "outcome",
+    }
+    engine.engine.configure.assert_called_once_with({"UCI_LimitStrength": True, "UCI_Elo": 2000})
+    engine.choose_move.assert_called_once_with(
+        chess.Board(),
+        top_k=16,
+        mode="blended",
+        depth=None,
+        time_limit_seconds=1.5,
+        style_weight=0.20,
+    )

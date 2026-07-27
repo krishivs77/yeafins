@@ -174,6 +174,66 @@ def score_from_player_perspective(
     return int(value)
 
 
+def evaluate_root_moves(
+    engine: chess.engine.SimpleEngine,
+    board: chess.Board,
+    moves: list[chess.Move],
+    *,
+    depth: int | None,
+    time_limit_seconds: float | None,
+) -> dict[chess.Move, int]:
+    """Evaluate restricted root moves in one MultiPV search."""
+    if not moves:
+        raise ValueError("At least one root move is required")
+
+    illegal_moves = [move for move in moves if move not in board.legal_moves]
+    if illegal_moves:
+        rendered = ", ".join(move.uci() for move in illegal_moves)
+        raise HybridEngineError(f"Illegal root moves supplied: {rendered}")
+
+    if depth is None and time_limit_seconds is None:
+        raise ValueError("Either depth or time_limit_seconds must be provided")
+
+    if time_limit_seconds is not None:
+        if time_limit_seconds <= 0:
+            raise ValueError("time_limit_seconds must be positive")
+        limit = chess.engine.Limit(time=time_limit_seconds)
+    else:
+        if depth is None or depth <= 0:
+            raise ValueError("depth must be positive")
+        limit = chess.engine.Limit(depth=depth)
+
+    information = engine.analyse(
+        board,
+        limit,
+        multipv=len(moves),
+        root_moves=moves,
+    )
+    results = [information] if isinstance(information, dict) else information
+    scores: dict[chess.Move, int] = {}
+
+    for item in results:
+        principal_variation = item.get("pv")
+        if not principal_variation:
+            continue
+
+        root_move = principal_variation[0]
+        if root_move not in moves:
+            continue
+
+        score = item.get("score")
+        if score is None:
+            raise HybridEngineError(f"Stockfish returned no score for {root_move.uci()}")
+        scores[root_move] = score_from_player_perspective(score, board)
+
+    missing = [move for move in moves if move not in scores]
+    if missing:
+        rendered = ", ".join(move.uci() for move in missing)
+        raise HybridEngineError(f"Stockfish did not score all root moves: {rendered}")
+
+    return scores
+
+
 def evaluate_candidates(
     engine: chess.engine.SimpleEngine,
     board: chess.Board,
@@ -182,62 +242,25 @@ def evaluate_candidates(
     depth: int | None = 12,
     time_limit_seconds: float | None = None,
 ) -> list[CandidateMove]:
-    """Evaluate each proposed move with Stockfish."""
-    if depth is None and time_limit_seconds is None:
-        raise ValueError("Either depth or time_limit_seconds must be provided")
+    """Evaluate all proposed moves in one restricted MultiPV search."""
+    moves = [move for move, _, _ in candidates]
+    scores = evaluate_root_moves(
+        engine,
+        board,
+        moves,
+        depth=depth,
+        time_limit_seconds=time_limit_seconds,
+    )
 
-    if depth is not None and depth <= 0:
-        raise ValueError("depth must be positive")
-
-    if time_limit_seconds is not None and time_limit_seconds <= 0:
-        raise ValueError("time_limit_seconds must be positive")
-
-    if time_limit_seconds is not None:
-        limit = chess.engine.Limit(
-            time=time_limit_seconds,
+    return [
+        CandidateMove(
+            move=move,
+            model_probability=probability,
+            model_rank=rank,
+            stockfish_cp=scores[move],
         )
-    else:
-        limit = chess.engine.Limit(
-            depth=depth,
-        )
-
-    evaluated: list[CandidateMove] = []
-
-    for move, probability, rank in candidates:
-        if move not in board.legal_moves:
-            raise HybridEngineError(f"Candidate move became illegal: {move.uci()}")
-
-        board.push(move)
-
-        try:
-            info = engine.analyse(
-                board,
-                limit,
-            )
-
-            child_score = info["score"]
-            score_after_move = child_score.pov(not board.turn)
-
-            cp_value = score_after_move.score(
-                mate_score=100_000,
-            )
-
-            if cp_value is None:
-                raise HybridEngineError(f"No numeric score for move {move.uci()}")
-
-        finally:
-            board.pop()
-
-        evaluated.append(
-            CandidateMove(
-                move=move,
-                model_probability=probability,
-                model_rank=rank,
-                stockfish_cp=int(cp_value),
-            )
-        )
-
-    return evaluated
+        for move, probability, rank in candidates
+    ]
 
 
 def infer_game_phase(board: chess.Board) -> str:
