@@ -30,6 +30,7 @@ yeafins-evaluate = "yeafins.training.evaluate:main"
 yeafins-play = "yeafins.engine.play:main"
 yeafins-evaluate-hybrid = "yeafins.engine.evaluate_hybrid:main"
 yeafins-game = "yeafins.engine.game:main"
+yeafins-filter-wins = "yeafins.data.filter_wins:main"
 
 [project.optional-dependencies]
 dev = [
