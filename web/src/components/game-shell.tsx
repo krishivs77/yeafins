@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ColourChoice } from "@/lib/chess";
 import { useYeafinsGame } from "@/hooks/use-yeafins-game";
-import { CandidatePanel } from "@/components/candidate-panel";
 import { YeafinsBoard } from "@/components/chess-board";
 import { EngineStatus, useEngineHealth } from "@/components/engine-status";
 import { GameResult } from "@/components/game-result";
@@ -29,24 +28,17 @@ export function GameShell() {
       <div className="game-layout">
         <main className="board-column">
           <div className="board-meta">
-            <div>
-              <span className="eyebrow">Live match</span>
-              <strong>
-                {game.started
-                  ? game.thinking
-                    ? "Yeafins is calculating"
-                    : game.outcome
-                      ? "Game complete"
-                      : visitorTurn
-                        ? "Your move"
-                        : "Yeafins to move"
-                  : "Configure your game"}
-              </strong>
-            </div>
-            <div className="phase-chip">
-              <span>Phase</span>
-              <strong>{game.engineData?.phase ?? "Opening"}</strong>
-            </div>
+            <strong aria-live="polite">
+              {game.started
+                ? game.thinking
+                  ? "Yeafins is thinking…"
+                  : game.outcome
+                    ? "Game over"
+                    : visitorTurn
+                      ? "Your turn"
+                      : "Yeafins to move"
+                : "Choose a side to begin"}
+            </strong>
           </div>
           <YeafinsBoard
             game={game.game}
@@ -60,7 +52,7 @@ export function GameShell() {
             {!game.started
               ? "Choose a colour to begin."
               : game.thinking
-                ? "Board locked while Yeafins evaluates its personalized candidates."
+                ? "Board locked while Yeafins chooses a move."
                 : canInteract
                   ? "Drag a piece or select a piece, then its destination."
                   : game.outcome
@@ -69,7 +61,7 @@ export function GameShell() {
           </p>
         </main>
 
-        <aside className="game-sidebar" aria-label="Game controls and analysis">
+        <aside className="game-sidebar" aria-label="Game controls">
           <EngineStatus state={health.state} retry={health.retry} />
 
           {!game.started ? (
@@ -84,21 +76,21 @@ export function GameShell() {
               <section className="players" aria-label="Players">
                 <PlayerCard
                   name="Yeafins"
-                  detail="Policy + evaluator"
+                  detail={game.visitorColour === "white" ? "Black" : "White"}
                   active={!visitorTurn && !Boolean(game.outcome)}
                   thinking={game.thinking}
                   engine
                 />
                 <PlayerCard
                   name="Visitor"
-                  detail={`Playing ${game.visitorColour}`}
+                  detail={game.visitorColour === "white" ? "White" : "Black"}
                   active={visitorTurn && !Boolean(game.outcome)}
                 />
               </section>
 
               {game.error && (
                 <div className="game-error" role="alert">
-                  <strong>Move request paused</strong>
+                  <strong>Yeafins could not respond</strong>
                   <p>{game.error}</p>
                   <button
                     className="secondary-button"
@@ -134,10 +126,6 @@ export function GameShell() {
             rows={game.history}
             visitorColour={game.visitorColour}
             pgn={game.pgn}
-          />
-          <CandidatePanel
-            candidates={game.engineData?.candidates ?? []}
-            styleWeight={game.engineData?.resolved_style_weight ?? null}
           />
         </aside>
       </div>

@@ -78,7 +78,7 @@ export function useYeafinsGame(moveRequester: MoveRequester = requestMove) {
       }
       const move = applyUciMove(gameRef.current, response.selected_move_uci);
       if (!move) {
-        setError("The engine returned a move that is not legal in this position.");
+        setError("The returned move was invalid. Restart or retry.");
         return;
       }
       setLastMove({ from: move.from, to: move.to });
@@ -86,7 +86,11 @@ export function useYeafinsGame(moveRequester: MoveRequester = requestMove) {
       sync();
     } catch (caught) {
       if (!controller.signal.aborted && version === requestVersion.current) {
-        setError(caught instanceof Error ? caught.message : "The engine request failed.");
+        setError(
+          caught instanceof Error && caught.message.includes("too long")
+            ? "Yeafins took too long to respond. Try again."
+            : "Yeafins could not respond. Try again.",
+        );
       }
     } finally {
       if (version === requestVersion.current) {

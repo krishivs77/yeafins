@@ -66,7 +66,6 @@ export function YeafinsBoard({
 
   return (
     <div className="board-frame" aria-label="Interactive chessboard">
-      <div className="board-coordinate board-coordinate--top">YEAFINS / LIVE BOARD</div>
       <Chessboard
         options={{
           id: "yeafins-board",
@@ -93,7 +92,6 @@ export function YeafinsBoard({
             ),
         }}
       />
-      <div className="board-coordinate board-coordinate--bottom">KRISHIV STYLE MODEL / v1</div>
     </div>
   );
 }

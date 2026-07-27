@@ -50,9 +50,9 @@ export function EngineStatus({
   retry: () => void;
 }) {
   const copy = {
-    connecting: ["Checking engine", "The policy model and evaluator are waking up."],
-    connected: ["Connected", "Model and Stockfish evaluator are ready."],
-    unavailable: ["Engine unavailable", "The backend is not ready. Try again in a moment."],
+    connecting: ["Connecting…", "Checking engine availability."],
+    connected: ["Engine ready", "Ready to play."],
+    unavailable: ["Engine unavailable", "Try again in a moment."],
   }[state];
 
   return (

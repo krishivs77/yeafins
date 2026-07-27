@@ -77,6 +77,22 @@ describe("useYeafinsGame", () => {
     expect(result.current.fen).toContain(" w KQkq ");
   });
 
+  it("shows a thinking state while waiting for Yeafins", async () => {
+    let resolveRequest: (value: EngineMoveResponse) => void = () => undefined;
+    const requester = vi.fn(
+      () =>
+        new Promise<EngineMoveResponse>((resolve) => {
+          resolveRequest = resolve;
+        }),
+    );
+    const { result } = renderHook(() => useYeafinsGame(requester));
+
+    act(() => result.current.startGame("black"));
+    await waitFor(() => expect(result.current.thinking).toBe(true));
+    await act(async () => resolveRequest(response("e2e4", "e4")));
+    await waitFor(() => expect(result.current.thinking).toBe(false));
+  });
+
   it("marks resignation as game over and cancels further play", () => {
     const requester = vi.fn().mockResolvedValue(response("e7e5", "e5"));
     const { result } = renderHook(() => useYeafinsGame(requester));

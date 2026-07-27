@@ -11,53 +11,23 @@ export default function Home() {
           </span>
           <span>
             <strong>YEAFINS</strong>
-            <small>Personal chess intelligence</small>
+            <small>Play chess</small>
           </span>
         </a>
-        <nav aria-label="Main navigation">
-          <a href="#play">Play</a>
-          <a href="#how-it-works">How it works</a>
-          <span className="tech-badge">Policy model + Stockfish hybrid</span>
-        </nav>
+        <a className="header-link" href="#about">What is Yeafins?</a>
       </header>
 
-      <div className="page-grid" aria-hidden="true" />
       <section className="hero" id="play" aria-labelledby="hero-title">
-        <div className="hero-copy">
-          <span className="eyebrow">A personal AI chess experiment</span>
-          <h1 id="hero-title">
-            Play the moves
-            <br />
-            <em>Krishiv might make.</em>
-          </h1>
-          <p>
-            Yeafins learned move preferences from 1,842 historical games, then pairs
-            that style with a Stockfish evaluator targeted around 2000 Elo.
-          </p>
-        </div>
-        <div className="hero-signal" aria-label="Engine pipeline">
-          <span>Policy</span>
-          <i />
-          <span>16 candidates</span>
-          <i />
-          <span>Blend</span>
-        </div>
+        <h1 id="hero-title">Play Yeafins</h1>
+        <p>Play against a chess engine trained on Krishiv&apos;s games.</p>
       </section>
 
       <GameShell />
       <HowItWorks />
 
       <footer>
-        <a className="brand" href="#" aria-label="Back to Yeafins top">
-          <span className="brand-mark" aria-hidden="true">
-            Y
-          </span>
-          <span>
-            <strong>YEAFINS</strong>
-            <small>Built from real games, not a persona prompt.</small>
-          </span>
-        </a>
-        <p>Complete FEN in. Personalized move out. No games stored.</p>
+        <strong>YEAFINS</strong>
+        <p>Your game stays in this browser.</p>
       </footer>
     </>
   );
