@@ -23,6 +23,7 @@ from yeafins.models.resnet_policy import (
     ResNetPolicyConfig,
     count_trainable_parameters,
 )
+from yeafins.runtime import select_device
 from yeafins.training.dataset import create_dataloader
 
 DEFAULT_POSITIONS_PATH = Path("data/processed/positions.parquet")
@@ -97,17 +98,6 @@ def set_seed(seed: int) -> None:
 
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-
-
-def select_device() -> torch.device:
-    """Select the best available PyTorch device."""
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
-
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-
-    return torch.device("cpu")
 
 
 def topk_correct_counts(

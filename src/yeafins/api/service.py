@@ -23,6 +23,7 @@ from yeafins.engine.hybrid import (
     infer_game_phase,
     phase_style_weight,
 )
+from yeafins.runtime import log_memory
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,26 +52,32 @@ class YeafinsService:
         self.hash_mb = hash_mb
         self._engine: YeafinsHybridEngine | None = None
         self._lock = asyncio.Lock()
+        self._startup_lock = asyncio.Lock()
         self._model_loaded = False
         self._stockfish_available = False
 
     async def startup(self) -> None:
-        if not self.checkpoint_path.is_file():
-            LOGGER.error("Configured Yeafins checkpoint does not exist")
-            return
-        try:
-            self._engine = await asyncio.to_thread(
-                YeafinsHybridEngine,
-                self.checkpoint_path,
-                stockfish_path=self.stockfish_path,
-                threads=self.threads,
-                hash_mb=self.hash_mb,
-            )
-        except Exception:
-            LOGGER.exception("Failed to initialize the Yeafins inference service")
-            return
-        self._model_loaded = True
-        self._stockfish_available = True
+        async with self._startup_lock:
+            if self._engine is not None:
+                return
+            log_memory("before engine startup", logger=LOGGER)
+            if not self.checkpoint_path.is_file():
+                LOGGER.error("Configured Yeafins checkpoint does not exist")
+                return
+            try:
+                self._engine = await asyncio.to_thread(
+                    YeafinsHybridEngine,
+                    self.checkpoint_path,
+                    stockfish_path=self.stockfish_path,
+                    threads=self.threads,
+                    hash_mb=self.hash_mb,
+                )
+            except Exception:
+                LOGGER.exception("Failed to initialize the Yeafins inference service")
+                return
+            self._model_loaded = True
+            self._stockfish_available = True
+            log_memory("engine startup complete", logger=LOGGER)
 
     async def shutdown(self) -> None:
         engine, self._engine = self._engine, None
@@ -115,6 +122,7 @@ class YeafinsService:
                 raise ServiceUnavailableError(
                     "The chess engine could not produce a move."
                 ) from error
+            log_memory("move request complete", logger=LOGGER)
             return response
 
     def _choose_move_sync(self, board: chess.Board, request: MoveRequest) -> MoveResponse:

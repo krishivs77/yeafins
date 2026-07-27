@@ -10,16 +10,10 @@ requires-python = ">=3.11"
 dependencies = [
     "chess>=1.11",
     "fastapi>=0.115",
-    "httpx>=0.28",
     "numpy>=2.0",
-    "pandas>=2.2",
-    "pyarrow>=18.0",
     "pydantic>=2.10",
-    "pyyaml>=6.0",
-    "scikit-learn>=1.6",
-    "torch>=2.6",
-    "tqdm>=4.67",
-    "uvicorn[standard]>=0.34",
+    "torch>=2.6,<3",
+    "uvicorn>=0.34",
 ]
 
 [project.scripts]
@@ -36,11 +30,28 @@ yeafins-filter-wins = "yeafins.data.filter_wins:main"
 yeafins-api = "yeafins.api.app:main"
 
 [project.optional-dependencies]
+data = [
+    "httpx>=0.28",
+    "pandas>=2.2",
+    "pyarrow>=18.0",
+    "scikit-learn>=1.6",
+    "tqdm>=4.67",
+]
+training = [
+    "pandas>=2.2",
+    "pyarrow>=18.0",
+    "tqdm>=4.67",
+]
 dev = [
+    "httpx>=0.28",
     "mypy>=1.14",
+    "pandas>=2.2",
+    "pyarrow>=18.0",
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "ruff>=0.9",
+    "scikit-learn>=1.6",
+    "tqdm>=4.67",
 ]
 
 [tool.setuptools.packages.find]

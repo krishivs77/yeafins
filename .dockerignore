@@ -17,3 +17,6 @@ games
 node_modules
 tests
 docs
+web
+.codex
+.agents

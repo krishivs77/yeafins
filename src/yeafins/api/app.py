@@ -16,8 +16,10 @@ from yeafins.api.config import ApiSettings
 from yeafins.api.errors import ApiError
 from yeafins.api.schemas import HealthResponse, MoveRequest, MoveResponse
 from yeafins.api.service import MoveService, YeafinsService
+from yeafins.runtime import log_memory
 
 LOGGER = logging.getLogger(__name__)
+log_memory("API modules imported", logger=LOGGER)
 
 
 def create_app(
@@ -111,4 +113,5 @@ def main() -> None:
         host=settings.host,
         port=settings.port,
         log_level=settings.log_level,
+        workers=1,
     )

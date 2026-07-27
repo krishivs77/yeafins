@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import gc
+import logging
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,9 +20,10 @@ from yeafins.models.resnet_policy import (
     ResNetPolicyConfig,
     apply_legal_move_mask,
 )
-from yeafins.training.train import select_device
+from yeafins.runtime import log_memory, select_device
 
 SelectionMode = Literal["best_of_top_k", "blended"]
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -57,13 +60,16 @@ def load_policy_model(
     checkpoint = torch.load(
         checkpoint_path,
         map_location=device,
-        weights_only=False,
+        weights_only=True,
     )
 
     model = ResNetPolicy(ResNetPolicyConfig(**checkpoint["model_config"]))
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()
+    del checkpoint
+    gc.collect()
+    log_memory("policy model loaded", logger=LOGGER)
 
     return model, device
 
@@ -400,6 +406,7 @@ class YeafinsHybridEngine:
                 "UCI_Elo": stockfish_elo,
             }
         )
+        log_memory("Stockfish started", logger=LOGGER)
 
     def choose_move(
         self,

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -84,7 +86,7 @@ def settings() -> ApiSettings:
         stockfish_path=None,
         allowed_origins=("https://example.vercel.app",),
         stockfish_threads=1,
-        stockfish_hash_mb=128,
+        stockfish_hash_mb=16,
         host="127.0.0.1",
         port=8000,
         log_level="info",
@@ -217,3 +219,34 @@ def test_cors_allows_only_configured_origin(settings: ApiSettings) -> None:
         )
     assert allowed.headers["access-control-allow-origin"] == "https://example.vercel.app"
     assert "access-control-allow-origin" not in denied.headers
+
+
+def test_render_safe_stockfish_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("STOCKFISH_THREADS", raising=False)
+    monkeypatch.delenv("STOCKFISH_HASH_MB", raising=False)
+    resolved = ApiSettings.from_env()
+    assert resolved.stockfish_threads == 1
+    assert resolved.stockfish_hash_mb == 16
+
+
+def test_service_startup_initializes_engine_only_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checkpoint = tmp_path / "model.pt"
+    checkpoint.write_bytes(b"fixture")
+    engine = MagicMock()
+    constructor = MagicMock(return_value=engine)
+    monkeypatch.setattr("yeafins.api.service.YeafinsHybridEngine", constructor)
+    service = YeafinsService(
+        checkpoint,
+        stockfish_path="stockfish",
+        threads=1,
+        hash_mb=16,
+    )
+
+    asyncio.run(service.startup())
+    asyncio.run(service.startup())
+    assert constructor.call_count == 1
+    assert service.health().status == "ok"
+    asyncio.run(service.shutdown())

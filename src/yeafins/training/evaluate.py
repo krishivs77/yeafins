@@ -18,11 +18,11 @@ from yeafins.models.resnet_policy import (
     ResNetPolicyConfig,
     apply_legal_move_mask,
 )
+from yeafins.runtime import select_device
 from yeafins.training.dataset import (
     create_dataloader,
     create_legal_mask_tensor,
 )
-from yeafins.training.train import select_device
 
 
 @dataclass

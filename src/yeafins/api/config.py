@@ -44,7 +44,7 @@ class ApiSettings:
             stockfish_path=os.getenv("STOCKFISH_PATH") or None,
             allowed_origins=origins,
             stockfish_threads=_positive_int("STOCKFISH_THREADS", 1),
-            stockfish_hash_mb=_positive_int("STOCKFISH_HASH_MB", 128),
+            stockfish_hash_mb=_positive_int("STOCKFISH_HASH_MB", 16),
             host=os.getenv("HOST", "0.0.0.0"),
             port=_positive_int("PORT", 8000),
             log_level=os.getenv("LOG_LEVEL", "info").lower(),
