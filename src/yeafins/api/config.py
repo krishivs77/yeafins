@@ -34,6 +34,7 @@ class ApiSettings:
             for origin in os.getenv(
                 "ALLOWED_ORIGINS",
                 "http://localhost:3000,http://127.0.0.1:3000",
+                "https://yeafins-gio545x2s-krishiv-s-funprojects.vercel.app",
             ).split(",")
             if origin.strip()
         )
